@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}{{ notice.idweb }} - BOAMP{% endblock %}
+
+{% block content %}
+<div class="notice-detail">
+    <div class="detail-header">
+        <a href="/" class="back-link">
+            <i class="fas fa-arrow-left"></i> Retour au tableau de bord
+        </a>
+        
+        <div class="header-main">
+            <h1>{{ notice.objet }}</h1>
+            <div class="header-meta">
+                <span class="notice-id-badge">{{ notice.idweb }}</span>
+                <span class="notice-deadline-badge {{ notice.deadline_class }}">
+                    <i class="fas fa-clock"></i> {{ notice.deadline_text }}
+                    {% if notice.deadline_field %}
+                    <span class="deadline-field">({{ notice.deadline_field }})</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-grid">
+        <!-- Main Info Column -->
+        <div class="detail-column">
+            <section class="info-card">
+                <h2><i class="fas fa-info-circle"></i> Informations générales</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong><i class="fas fa-building"></i> Acheteur</strong>
+                        <p>{{ notice.nomacheteur }}</p>
+                    </div>
+                    <div class="info-item">
+                        <strong><i class="fas fa-calendar"></i> Date de publication</strong>
+                        <p>{{ notice.dateparution }}</p>
+                    </div>
+                    <div class="info-item">
+                        <strong><i class="fas fa-tag"></i> Famille</strong>
+                        <p>{{ notice.famille }}</p>
+                    </div>
+                    <div class="info-item">
+                        <strong><i class="fas fa-map-marker-alt"></i> Département(s)</strong>
+                        <p>
+                            {% for dept in notice.departments_list %}
+                            <span class="dept-badge">{{ dept }}</span>
+                            {% endfor %}
+                        </p>
+                    </div>
+                    <div class="info-item">
+                        <strong><i class="fas fa-cogs"></i> Type de procédure</strong>
+                        <p>{{ notice.type_procedure }}</p>
+                    </div>
+                    <div class="info-item">
+                        <strong><i class="fas fa-cube"></i> Nature</strong>
+                        <p>{{ notice.nature }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="info-card">
+                <h2><i class="fas fa-key"></i> Mots-clés</h2>
+                <div class="keywords-container">
+                    {% if notice.keywords_list %}
+                        {% for keyword in notice.keywords_list %}
+                        <span class="keyword-tag">{{ keyword }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-data">Aucun mot-clé</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="info-card">
+                <h2><i class="fas fa-layer-group"></i> Lots</h2>
+                <div class="lots-container">
+                    {% if notice.lots_list %}
+                        {% for lot in notice.lots_list %}
+                        <span class="lot-tag">{{ lot }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-data">Aucun lot spécifié</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Actions Column -->
+        <div class="detail-column">
+            <section class="actions-card">
+                <h2><i class="fas fa-bolt"></i> Actions rapides</h2>
+                
+                <div class="actions-grid">
+                    {% if notice.dce_link and notice.dce_link.lower() != 'none' %}
+                    <a href="{{ notice.dce_link }}" target="_blank" class="action-btn primary">
+                        <i class="fas fa-external-link-alt"></i>
+                        <span>Accéder au DCE</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if notice.boamp_link %}
+                    <a href="{{ notice.boamp_link }}" target="_blank" class="action-btn secondary">
+                        <i class="fas fa-external-link-alt"></i>
+                        <span>Voir sur BOAMP</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if notice.visite_obligatoire and notice.visite_obligatoire.lower() == 'yes' %}
+                    <div class="action-alert">
+                        <i class="fas fa-hard-hat"></i>
+                        <div>
+                            <strong>Visite obligatoire</strong>
+                            <p>Une visite sur site est requise</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if notice.deadline_date %}
+                    <div class="deadline-info {{ notice.deadline_class }}">
+                        <i class="fas fa-calendar-alt"></i>
+                        <div>
+                            <strong>Délai limite</strong>
+                            <p>{{ notice.deadline_date }}</p>
+                            {% if notice.deadline_field %}
+                            <small>{{ notice.deadline_field }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="dates-card">
+                <h2><i class="fas fa-calendar-day"></i> Dates importantes</h2>
+                <div class="dates-list">
+                    {% if notice.datelimitereponse %}
+                    <div class="date-item {% if notice.deadline_field == 'datelimitereponse' %}active{% endif %}">
+                        <div class="date-label">Limite de réponse</div>
+                        <div class="date-value">{{ notice.datelimitereponse }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if notice.datefindiffusion %}
+                    <div class="date-item {% if notice.deadline_field == 'datefindiffusion' %}active{% endif %}">
+                        <div class="date-label">Fin de diffusion</div>
+                        <div class="date-value">{{ notice.datefindiffusion }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if notice.dateparution %}
+                    <div class="date-item">
+                        <div class="date-label">Publication</div>
+                        <div class="date-value">{{ notice.dateparution }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="raw-data-card">
+                <h2><i class="fas fa-database"></i> Données techniques</h2>
+                <div class="raw-data">
+                    <div class="data-item">
+                        <strong>Contract Folder ID:</strong>
+                        <code>{{ notice.contractfolderid|default('N/A', true) }}</code>
+                    </div>
+                    <div class="data-item">
+                        <strong>Source schema:</strong>
+                        <code>{{ notice.source_schema|default('N/A', true) }}</code>
+                    </div>
+                    <div class="data-item">
+                        <strong>Filename:</strong>
+                        <code>{{ notice.filename|default('N/A', true) }}</code>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- PDF Content Preview -->
+    {% if notice.pdf_content %}
+    <section class="pdf-preview-card">
+        <h2><i class="fas fa-file-pdf"></i> Contenu extrait du PDF</h2>
+        <div class="pdf-preview">
+            <div class="pdf-meta">
+                <span class="pdf-status {{ notice.pdf_status|lower }}">
+                    <i class="fas fa-check-circle"></i> {{ notice.pdf_status }}
+                </span>
+                {% if notice.pages_extracted %}
+                <span class="pdf-pages">
+                    <i class="fas fa-file-alt"></i> {{ notice.pages_extracted }} pages
+                </span>
+                {% endif %}
+            </div>
+            <div class="pdf-content">
+                <pre>{{ notice.pdf_content[:2000] }}{% if notice.pdf_content|length > 2000 %}...{% endif %}</pre>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

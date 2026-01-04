@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BOAMP Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <i class="fas fa-file-contract"></i>
+                    <h1>BOAMP Dashboard</h1>
+                </div>
+                <div class="nav-links">
+                    <a href="/" class="nav-link active">
+                        <i class="fas fa-home"></i> Tableau de bord
+                    </a>
+                    <a href="/api/notices" class="nav-link">
+                        <i class="fas fa-code"></i> API
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>BOAMP Dashboard &copy; 2025 - Données BOAMP</p>
+            <p class="today-date">
+                <i class="fas fa-calendar-day"></i> {{ stats.today if stats else "" }}
+            </p>
+        </div>
+    </footer>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

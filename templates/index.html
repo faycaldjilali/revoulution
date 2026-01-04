@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - BOAMP{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Stats Cards -->
+    <section class="stats-section">
+        <h2><i class="fas fa-chart-bar"></i> Statistiques</h2>
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.total_notices }}</h3>
+                    <p>Notices totales</p>
+                </div>
+            </div>
+            
+            <div class="stat-card urgent">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.urgent_deadlines }}</h3>
+                    <p>Délais urgents (&lt; 7j)</p>
+                </div>
+            </div>
+            
+            <div class="stat-card overdue">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.overdue_deadlines }}</h3>
+                    <p>Délais dépassés</p>
+                </div>
+            </div>
+            
+            <div class="stat-card dce">
+                <div class="stat-icon">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.with_dce_link }}</h3>
+                    <p>Avec DCE</p>
+                </div>
+            </div>
+            
+            <div class="stat-card visite">
+                <div class="stat-icon">
+                    <i class="fas fa-hard-hat"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.with_visite_obligatoire }}</h3>
+                    <p>Visite obligatoire</p>
+                </div>
+            </div>
+            
+            <div class="stat-card keywords">
+                <div class="stat-icon">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ stats.unique_keywords }}</h3>
+                    <p>Mots-clés uniques</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="filters-section">
+        <h2><i class="fas fa-filter"></i> Filtres</h2>
+        <form method="get" class="filters-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="keyword"><i class="fas fa-search"></i> Mot-clé</label>
+                    <input type="text" id="keyword" name="keyword" 
+                           value="{{ filters.keyword if filters.keyword else '' }}"
+                           placeholder="Rechercher par mot-clé...">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="department"><i class="fas fa-map-marker-alt"></i> Département</label>
+                    <select id="department" name="department">
+                        <option value="">Tous les départements</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" 
+                                {% if filters.department == dept %}selected{% endif %}>
+                            {{ dept }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="nature"><i class="fas fa-cube"></i> Nature</label>
+                    <select id="nature" name="nature">
+                        <option value="">Toutes les natures</option>
+                        {% for nat in natures %}
+                        <option value="{{ nat }}" 
+                                {% if filters.nature == nat %}selected{% endif %}>
+                            {{ nat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="visite"><i class="fas fa-hard-hat"></i> Visite obligatoire</label>
+                    <select id="visite" name="visite">
+                        <option value="">Tous</option>
+                        <option value="yes" {% if filters.visite == 'yes' %}selected{% endif %}>Oui</option>
+                        <option value="no" {% if filters.visite == 'no' %}selected{% endif %}>Non</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="urgency"><i class="fas fa-clock"></i> Délai</label>
+                    <select id="urgency" name="urgency">
+                        <option value="">Tous les délais</option>
+                        <option value="urgent" {% if filters.urgency == 'urgent' %}selected{% endif %}>Urgent (&lt; 7j)</option>
+                        <option value="overdue" {% if filters.urgency == 'overdue' %}selected{% endif %}>Dépassé</option>
+                        <option value="upcoming" {% if filters.urgency == 'upcoming' %}selected{% endif %}>À venir</option>
+                    </select>
+                </div>
+                
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Appliquer les filtres
+                    </button>
+                    <a href="/" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Réinitialiser
+                    </a>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <!-- Notices Table -->
+    <section class="notices-section">
+        <div class="section-header">
+            <h2><i class="fas fa-list"></i> Notices ({{ notices|length }})</h2>
+            <div class="section-actions">
+                <button id="export-btn" class="btn btn-outline">
+                    <i class="fas fa-download"></i> Exporter
+                </button>
+            </div>
+        </div>
+        
+        {% if notices %}
+        <div class="notices-grid">
+            {% for notice in notices %}
+            <div class="notice-card {{ notice.deadline_class }}">
+                <div class="notice-header">
+                    <span class="notice-id">{{ notice.idweb }}</span>
+                    <span class="notice-deadline {{ notice.deadline_class }}">
+                        <i class="fas fa-calendar-alt"></i> {{ notice.deadline_text }}
+                    </span>
+                </div>
+                
+                <div class="notice-body">
+                    <h3 class="notice-title">
+                        <a href="/notice/{{ notice.idweb }}" class="notice-link">
+                            {{ notice.objet[:150] }}{% if notice.objet|length > 150 %}...{% endif %}
+                        </a>
+                    </h3>
+                    
+                    <div class="notice-buyer">
+                        <i class="fas fa-building"></i> {{ notice.nomacheteur }}
+                    </div>
+                    
+                    <div class="notice-meta">
+                        <span class="meta-item">
+                            <i class="fas fa-calendar"></i> {{ notice.dateparution }}
+                        </span>
+                        <span class="meta-item">
+                            <i class="fas fa-map-marker-alt"></i> 
+                            {% for dept in notice.departments_list[:2] %}
+                            <span class="dept-badge">{{ dept }}</span>
+                            {% endfor %}
+                            {% if notice.departments_list|length > 2 %}
+                            <span class="dept-badge">+{{ notice.departments_list|length - 2 }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="notice-keywords">
+                        {% for keyword in notice.keywords_list[:3] %}
+                        <span class="keyword-badge">{{ keyword }}</span>
+                        {% endfor %}
+                        {% if notice.keywords_list|length > 3 %}
+                        <span class="keyword-badge">+{{ notice.keywords_list|length - 3 }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="notice-footer">
+                        <div class="footer-left">
+                            {% if notice.lots_list %}
+                            <span class="lot-info">
+                                <i class="fas fa-layer-group"></i> {{ notice.lots_list|length }} lot(s)
+                            </span>
+                            {% endif %}
+                            
+                            {% if notice.visite_obligatoire and notice.visite_obligatoire.lower() == 'yes' %}
+                            <span class="visite-badge">
+                                <i class="fas fa-hard-hat"></i> Visite obligatoire
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="footer-right">
+                            {% if notice.dce_link and notice.dce_link.lower() != 'none' %}
+                            <a href="{{ notice.dce_link }}" target="_blank" class="dce-link" title="Accéder au DCE">
+                                <i class="fas fa-external-link-alt"></i> DCE
+                            </a>
+                            {% endif %}
+                            
+                            <a href="/notice/{{ notice.idweb }}" class="view-link">
+                                <i class="fas fa-eye"></i> Détails
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+            <i class="fas fa-inbox fa-3x"></i>
+            <h3>Aucune notice trouvée</h3>
+            <p>Essayez de modifier vos critères de recherche</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
