@@ -155,7 +155,7 @@
         {% if notices %}
         <div class="notices-grid">
             {% for notice in notices %}
-            <div class="notice-card {{ notice.deadline_class }}">
+            <div class="notice-card {{ notice.deadline_class }}" id="notice-{{ notice.idweb }}">
                 <div class="notice-header">
                     <span class="notice-id">{{ notice.idweb }}</span>
                     <span class="notice-deadline {{ notice.deadline_class }}">
@@ -166,6 +166,7 @@
                 <div class="notice-body">
                     <div class="notice-title-wrapper">
                         <i class="fas fa-star star-icon" onclick="toggleStar(this)" data-notice-id="{{ notice.idweb }}"></i>
+                        <i class="fas fa-trash-alt delete-icon" onclick="deleteNotice('{{ notice.idweb }}')" title="Supprimer cette offre"></i>
                         <h3 class="notice-title">
                             <a href="/notice/{{ notice.idweb }}" class="notice-link">
                                 {{ notice.objet[:150] }}{% if notice.objet|length > 150 %}...{% endif %}
@@ -243,21 +244,32 @@
 </div>
 
 <style>
-    .star-icon {
+    .star-icon, .delete-icon {
         font-size: 20px;
         cursor: pointer;
-        color: #ddd;
         transition: color 0.3s, transform 0.2s;
         margin-right: 8px;
         vertical-align: middle;
     }
     
-    .star-icon:hover {
+    .star-icon {
+        color: #ddd;
+    }
+    
+    .delete-icon {
+        color: #ff6b6b;
+    }
+    
+    .star-icon:hover, .delete-icon:hover {
         transform: scale(1.1);
     }
     
     .star-icon.active {
         color: gold;
+    }
+    
+    .delete-icon:hover {
+        color: #ff3838;
     }
     
     .notice-title-wrapper {
@@ -271,24 +283,160 @@
         margin: 0;
     }
 </style>
-
 <script>
+    // Get CSRF token from meta tag or create a function to retrieve it
+    function getCsrfToken() {
+        // Check if there's a meta tag with CSRF token
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        if (metaToken) {
+            return metaToken.getAttribute('content');
+        }
+        return '';
+    }
+    
     function toggleStar(star) {
         star.classList.toggle('active');
         
-        // Récupérer l'ID de la notice
         const noticeId = star.getAttribute('data-notice-id');
-        
-        // Sauvegarder l'état dans le localStorage
         const isActive = star.classList.contains('active');
+        
         if (isActive) {
             localStorage.setItem(`star_${noticeId}`, 'active');
         } else {
             localStorage.removeItem(`star_${noticeId}`);
         }
+    }
+    
+    function deleteNotice(noticeId) {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette offre ? Cette action est irréversible.')) {
+            // Show loading state
+            const noticeCard = document.getElementById(`notice-${noticeId}`);
+            if (noticeCard) {
+                noticeCard.style.opacity = '0.5';
+                noticeCard.style.pointerEvents = 'none';
+            }
+            
+            // Send AJAX request to delete the notice
+            fetch(`/notice/delete/${noticeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else if (response.status === 404) {
+                    throw new Error('Notice non trouvée');
+                } else if (response.status === 500) {
+                    throw new Error('Erreur serveur');
+                } else {
+                    throw new Error('Erreur inconnue');
+                }
+            })
+            .then(data => {
+                // Remove the notice card from the page
+                if (noticeCard) {
+                    noticeCard.remove();
+                    // Update the notice count
+                    const noticeCount = document.querySelector('.notices-section h2');
+                    if (noticeCount) {
+                        const currentText = noticeCount.textContent;
+                        const countMatch = currentText.match(/\((\d+)\)/);
+                        if (countMatch) {
+                            const currentCount = parseInt(countMatch[1]);
+                            const newCount = currentCount - 1;
+                            noticeCount.innerHTML = noticeCount.innerHTML.replace(
+                                `(${currentCount})`, 
+                                `(${newCount})`
+                            );
+                        }
+                    }
+                }
+                // Also update the stats cards
+                updateStatsAfterDeletion();
+                showNotification('Offre supprimée avec succès', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (noticeCard) {
+                    noticeCard.style.opacity = '1';
+                    noticeCard.style.pointerEvents = 'auto';
+                }
+                showNotification(`Erreur: ${error.message}`, 'error');
+            });
+        }
+    }
+    
+    function updateStatsAfterDeletion() {
+        // Update stats by fetching new data from API
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(stats => {
+                // Update each stat card
+                document.querySelector('.stat-card.total h3').textContent = stats.total_notices;
+                document.querySelector('.stat-card.urgent h3').textContent = stats.urgent_deadlines;
+                document.querySelector('.stat-card.overdue h3').textContent = stats.overdue_deadlines;
+                document.querySelector('.stat-card.dce h3').textContent = stats.with_dce_link;
+                document.querySelector('.stat-card.visite h3').textContent = stats.with_visite_obligatoire;
+                document.querySelector('.stat-card.keywords h3').textContent = stats.unique_keywords;
+            })
+            .catch(error => console.error('Error updating stats:', error));
+    }
+    
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()">&times;</button>
+        `;
         
-        // Vous pourriez aussi envoyer une requête AJAX au serveur ici
-        // pour sauvegarder l'état des favoris dans la base de données
+        // Add styles
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        if (type === 'success') {
+            notification.style.backgroundColor = '#4CAF50';
+        } else if (type === 'error') {
+            notification.style.backgroundColor = '#f44336';
+        } else {
+            notification.style.backgroundColor = '#2196F3';
+        }
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
     }
     
     // Restaurer l'état des étoiles au chargement de la page
@@ -300,6 +448,31 @@
                 star.classList.add('active');
             }
         });
+        
+        // Add click event for export button
+        document.getElementById('export-btn')?.addEventListener('click', function() {
+            exportNotices();
+        });
     });
+    
+    function exportNotices() {
+        // Get current filters from the form
+        const keyword = document.getElementById('keyword')?.value || '';
+        const department = document.getElementById('department')?.value || '';
+        const nature = document.getElementById('nature')?.value || '';
+        const visite = document.getElementById('visite')?.value || '';
+        const urgency = document.getElementById('urgency')?.value || '';
+        
+        // Build query string
+        const params = new URLSearchParams();
+        if (keyword) params.append('keyword', keyword);
+        if (department) params.append('department', department);
+        if (nature) params.append('nature', nature);
+        if (visite) params.append('visite', visite);
+        if (urgency) params.append('urgency', urgency);
+        
+        // Redirect to export endpoint (you'll need to implement this)
+        window.location.href = `/api/export?${params.toString()}`;
+    }
 </script>
 {% endblock %}
