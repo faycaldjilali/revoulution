@@ -164,11 +164,14 @@
                 </div>
                 
                 <div class="notice-body">
-                    <h3 class="notice-title">
-                        <a href="/notice/{{ notice.idweb }}" class="notice-link">
-                            {{ notice.objet[:150] }}{% if notice.objet|length > 150 %}...{% endif %}
-                        </a>
-                    </h3>
+                    <div class="notice-title-wrapper">
+                        <i class="fas fa-star star-icon" onclick="toggleStar(this)" data-notice-id="{{ notice.idweb }}"></i>
+                        <h3 class="notice-title">
+                            <a href="/notice/{{ notice.idweb }}" class="notice-link">
+                                {{ notice.objet[:150] }}{% if notice.objet|length > 150 %}...{% endif %}
+                            </a>
+                        </h3>
+                    </div>
                     
                     <div class="notice-buyer">
                         <i class="fas fa-building"></i> {{ notice.nomacheteur }}
@@ -238,4 +241,65 @@
         {% endif %}
     </section>
 </div>
+
+<style>
+    .star-icon {
+        font-size: 20px;
+        cursor: pointer;
+        color: #ddd;
+        transition: color 0.3s, transform 0.2s;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+    
+    .star-icon:hover {
+        transform: scale(1.1);
+    }
+    
+    .star-icon.active {
+        color: gold;
+    }
+    
+    .notice-title-wrapper {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+    
+    .notice-title {
+        flex: 1;
+        margin: 0;
+    }
+</style>
+
+<script>
+    function toggleStar(star) {
+        star.classList.toggle('active');
+        
+        // Récupérer l'ID de la notice
+        const noticeId = star.getAttribute('data-notice-id');
+        
+        // Sauvegarder l'état dans le localStorage
+        const isActive = star.classList.contains('active');
+        if (isActive) {
+            localStorage.setItem(`star_${noticeId}`, 'active');
+        } else {
+            localStorage.removeItem(`star_${noticeId}`);
+        }
+        
+        // Vous pourriez aussi envoyer une requête AJAX au serveur ici
+        // pour sauvegarder l'état des favoris dans la base de données
+    }
+    
+    // Restaurer l'état des étoiles au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        const stars = document.querySelectorAll('.star-icon');
+        stars.forEach(star => {
+            const noticeId = star.getAttribute('data-notice-id');
+            if (localStorage.getItem(`star_${noticeId}`) === 'active') {
+                star.classList.add('active');
+            }
+        });
+    });
+</script>
 {% endblock %}
