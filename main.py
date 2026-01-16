@@ -1,5 +1,3 @@
-#
-
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,7 +9,7 @@ from dateutil import parser
 from typing import Optional, List, Dict, Any
 import json
 
-app = FastAPI(title="BOAMP Dashboard", version="1.0.0")
+app = FastAPI(title="app2", version="2.0.0")
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -384,8 +382,43 @@ async def api_stats():
     """API endpoint to get dashboard statistics."""
     stats = get_dashboard_stats()
     return stats
+# Add this delete endpoint after the existing routes in your FastAPI code
 
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.delete("/notice/delete/{notice_id}", response_class=JSONResponse)
+async def delete_notice(request: Request, notice_id: str):
+    """Delete a notice from the database."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # First check if the notice exists
+        cursor.execute("SELECT idweb FROM boamp_notices WHERE idweb = ? OR id = ?", 
+                      (notice_id, notice_id))
+        existing_notice = cursor.fetchone()
+        
+        if not existing_notice:
+            raise HTTPException(status_code=404, detail="Notice not found")
+        
+        # Delete the notice
+        cursor.execute("DELETE FROM boamp_notices WHERE idweb = ? OR id = ?", 
+                      (notice_id, notice_id))
+        conn.commit()
+        
+        # Check if any rows were affected
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=500, detail="Failed to delete notice")
+        
+        return JSONResponse(
+            status_code=200,
+            content={"message": "Notice deleted successfully"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting notice: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if conn:
+            conn.close()
